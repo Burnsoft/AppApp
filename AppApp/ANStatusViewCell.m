@@ -163,7 +163,9 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         statusTextLabel.frame = statusLabelNewFrame;
         
         NSString *username = [self.postData stringForKeyPath:@"user.username"];
-        usernameTextLabel.text = username;
+        NSString *sourceName = [self.postData stringForKeyPath:@"source.name"];
+
+        usernameTextLabel.text = [NSString stringWithFormat:@"%@ / %@",username,sourceName];
         
         NSDate *createdAt = [NSDate dateFromISO8601String:[self.postData stringForKey:@"created_at"]];
         created_atTextLabel.text = [createdAt stringInterval];

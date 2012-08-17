@@ -8,4 +8,4 @@
 
 #import "ANConstants.h"
 
-NSString *const kANAPIClientID = @"RG2Brqye96rLZQtjwRenVZsBrMtpYXYP";
+NSString *const kANAPIClientID = @"bnwMF3tDNmRtLujNsDmKb86FZpMcsPwf";
