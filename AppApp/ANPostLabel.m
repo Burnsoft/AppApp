@@ -7,119 +7,62 @@
 //
 
 #import "ANPostLabel.h"
-#import "CCoreTextLabel_HTMLExtensions.h"
-#import "CMarkupValueTransformer.h"
-#import "NSAttributedString_Extensions.h"
-#import <CoreText/CoreText.h>
+#import "ANPostLinkButton.h"
+#import "NSAttributedString+HTML.h"
 #import "NSDictionary+SDExtensions.h"
+#import "DTCoreTextConstants.h"
 
 @implementation ANPostLabel
-{
-    NSArray *linkRanges;
-    UITapGestureRecognizer *tapRecognizer;
-}
 
 - (id)initWithFrame:(CGRect)frame
 {
     if ((self = [super initWithFrame:frame]) != NULL)
     {
-        tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tap:)];
-        tapRecognizer.enabled = NO;
-        [self addGestureRecognizer:tapRecognizer];
+        self.delegate = self;
+        _enableLinks = YES;
+        //self.drawDebugFrames = YES;
+        self.userInteractionEnabled = YES;
     }
     return(self);
 }
 
-- (id)initWithCoder:(NSCoder *)inCoder
+- (void)setEnableLinks:(BOOL)enableLinks
 {
-    if ((self = [super initWithCoder:inCoder]) != NULL)
-    {
-        tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tap:)];
-        tapRecognizer.enabled = NO;
-        [self addGestureRecognizer:tapRecognizer];
-    }
-    return(self);
-}
-
-- (void)dealloc
-{
-    [self removeGestureRecognizer:tapRecognizer];
-}
-
-- (void)setText:(NSAttributedString *)inText
-{
-    if (self.text != inText)
-    {
-        [super setText:inText];
-        
-        NSMutableArray *theRanges = [NSMutableArray array];
-        [self.text enumerateAttribute:kMarkupLinkAttributeName inRange:(NSRange){ .length = self.text.length } options:0 usingBlock:^(id value, NSRange range, BOOL *stop) {
-            if (value != NULL)
-            {
-                [theRanges addObject:[NSValue valueWithRange:range]];
-            }
-        }];
-        linkRanges = [theRanges copy];
-
-        [self removeGestureRecognizer:tapRecognizer];
-        tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tap:)];
-        [self addGestureRecognizer:tapRecognizer];
-        tapRecognizer.enabled = linkRanges.count > 0;
-    }
-}
-
-- (void)setEnabled:(BOOL)inEnabled
-{
-    [super setEnabled:inEnabled];
+    if (enableLinks == _enableLinks)
+        return;
     
-    tapRecognizer.enabled = inEnabled;
+    _enableLinks = enableLinks;
+    [self relayoutText];
 }
 
-#pragma mark -
-
-/* 
- workaround to a bug.  will investigate more soon.
- 
- the tap doesn't get triggered unless its in the first line's worth of control height.
- 
- */
- 
-- (BOOL)canTapAtPoint:(CGPoint)point;
+- (void)executeTapHandler:(id)sender
 {
-    CGPoint theLocation = point;
-    theLocation.x -= self.insets.left;
-    theLocation.y -= self.insets.top;
-    
-    NSRange theRange;
-    NSDictionary *theAttributes = [self attributesAtPoint:theLocation effectiveRange:&theRange];
-    NSString *theType = [theAttributes objectForKey:@"ANPostLabelAttributeType"];
-    NSString *theValue = [theAttributes objectForKey:@"ANPostLabelAttributeValue"];
-    
-    if (theValue && theType)
-    {
-        return YES;
-    }
-    return NO;
+    ANPostLinkButton *button = (ANPostLinkButton *)sender;
+    _tapHandler(button.type, button.value);
 }
 
-- (void)tap:(UITapGestureRecognizer *)inGestureRecognizer
+- (UIView *)attributedTextContentView:(DTAttributedTextContentView *)attributedTextContentView viewForLink:(NSURL *)url identifier:(NSString *)identifier frame:(CGRect)frame;
 {
-    CGPoint theLocation = [inGestureRecognizer locationInView:self];
-    theLocation.x -= self.insets.left;
-    theLocation.y -= self.insets.top;
+    if (!_enableLinks)
+        return nil;
+    // we're misusing an NSURL here, but i want to modify DTCoreText as little as possible.
+    // soon, i hope to do this right and submit a patch.  just trying to get things working again.  -- BKS
+    NSString *value = (NSString *)url;
     
-    NSRange theRange;
-    NSDictionary *theAttributes = [self attributesAtPoint:theLocation effectiveRange:&theRange];
-    NSString *theType = [theAttributes objectForKey:@"ANPostLabelAttributeType"];
-    NSString *theValue = [theAttributes objectForKey:@"ANPostLabelAttributeValue"];
+    ANPostLinkButton *button = [[ANPostLinkButton alloc] initWithFrame:frame];
+    button.minimumHitSize = CGSizeMake(20, 20);
+    button.type = identifier;
+    button.value = value;
+    button.enabled = YES;
+    button.userInteractionEnabled = YES;
+    [button addTarget:self action:@selector(executeTapHandler:) forControlEvents:UIControlEventTouchUpInside];
+    
+    return button;
+}
 
-    if (theValue && theType)
-    {
-        if (self.tapHandler != NULL)
-        {
-            self.tapHandler(theRange, theType, theValue);
-        }
-    }
+- (UIView *)attributedTextContentView:(DTAttributedTextContentView *)attributedTextContentView viewForAttributedString:(NSAttributedString *)string frame:(CGRect)frame;
+{
+    return nil;
 }
 
 - (void)addAttributes:(NSArray *)items key:(NSString *)key type:(NSString *)type attributedString:(NSMutableAttributedString *)attrString
@@ -128,6 +71,8 @@
     {
         NSUInteger pos = [item unsignedIntegerForKey:@"pos"];
         NSUInteger len = [item unsignedIntegerForKey:@"len"];
+        if (pos + len >= attrString.length - 1)
+            len = (attrString.length - 1) - pos;
         NSString *keyValue = [item stringForKey:key];
         NSRange range = { .location = pos, .length = len };
         
@@ -135,6 +80,8 @@
                                        (__bridge id)[UIColor colorWithRed:60.0/255.0 green:123.0/255.0 blue:184.0/255.0 alpha:1.0].CGColor, (__bridge NSString *)kCTForegroundColorAttributeName,
                                        type, @"ANPostLabelAttributeType",
                                        keyValue, @"ANPostLabelAttributeValue",
+                                       type, DTGUIDAttribute,
+                                       keyValue, DTLinkAttribute,
                                        NULL];
 
         [attrString setAttributes:theAttributes range:range];
@@ -150,17 +97,36 @@
     NSString *text = [_postData stringForKey:@"text"];
     if (!text || [text length] == 0)
         text = @"[deleted post]";
-    NSMutableAttributedString *postString = [[NSMutableAttributedString alloc] initWithString:text];
     
+    NSData *htmlData = [text dataUsingEncoding:NSUTF8StringEncoding];
+	NSMutableAttributedString *postString = [[[NSAttributedString alloc] initWithHTMLData:htmlData documentAttributes:NULL] mutableCopy];
+
     NSArray *hashtags = [_postData arrayForKeyPath:@"entities.hashtags"];
     NSArray *links = [_postData arrayForKeyPath:@"entities.links"];
     NSArray *mentions = [_postData arrayForKeyPath:@"entities.mentions"];
+    
+    /*[postString addAttribute:(NSString *)kCTFontAttributeName
+                        value:[UIFont fontWithName:@"Helvetica" size:12.0f]
+                        range:NSMakeRange(0, postString.length-1)];*/
+
+    UIFont *font = [UIFont fontWithName:@"Helvetica" size:12.0f];
+    CTFontRef ctFont = CTFontCreateWithName((__bridge CFStringRef)font.fontName, font.pointSize, NULL);
+    [postString addAttribute:(NSString*)kCTFontAttributeName
+                        value:(__bridge id)ctFont
+                        range:NSMakeRange(0, postString.length-1)];
+    CFRelease(ctFont);
+    
+    [postString addAttribute:(NSString *)kCTForegroundColorAttributeName
+                       value:(id)[UIColor colorWithRed:30.0/255.0 green:88.0/255.0 blue:119.0/255.0 alpha:1.0].CGColor
+                       range:NSMakeRange(0, postString.length-1)];
     
     [self addAttributes:hashtags key:@"name" type:@"hashtag" attributedString:postString];
     [self addAttributes:links key:@"url" type:@"link" attributedString:postString];
     [self addAttributes:mentions key:@"id" type:@"name" attributedString:postString];
     
-    self.text = postString;
+    self.attributedString = postString;
+    [self relayoutText];
+    [self layoutSubviews];
 }
 
 @end

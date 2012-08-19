@@ -6,13 +6,12 @@
 //  Copyright (c) 2012 Sneakyness. All rights reserved.
 //
 
-#import "CCoreTextLabel.h"
+#import "DTAttributedTextContentView.h"
 
-@interface ANPostLabel : CCoreTextLabel
+@interface ANPostLabel : DTAttributedTextContentView<DTAttributedTextContentViewDelegate>
 
 @property (nonatomic, strong) NSDictionary *postData;
-@property (readwrite, nonatomic, copy) BOOL (^tapHandler)(NSRange, NSString *, NSString *type);
-
-- (BOOL)canTapAtPoint:(CGPoint)point;
+@property (nonatomic, assign) BOOL enableLinks;
+@property (readwrite, nonatomic, copy) BOOL (^tapHandler)(NSString *type, NSString *value);
 
 @end

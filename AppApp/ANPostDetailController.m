@@ -116,7 +116,7 @@
 
     ANPostStatusViewController *postView = [[ANPostStatusViewController alloc] initWithReplyToID:replyToID];
     [self presentModalViewController:postView animated:YES];
-    postView.postTextView.text = [NSString stringWithFormat:@"RP @%@: %@", posterUsername, originalText];
+    postView.postText = [NSString stringWithFormat:@"RP @%@: %@", posterUsername, originalText];
 }
 
 - (IBAction)userAction:(id)sender
@@ -229,11 +229,11 @@
     [self loadMoreCompleted];
 }
 
-- (void)attributedLabel:(TTTAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url
+/*- (void)attributedLabel:(TTTAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url
 {
     if ([[UIApplication sharedApplication] canOpenURL:url]) {
         [[UIApplication sharedApplication] openURL:url];
     }
-}
+}*/
 
 @end

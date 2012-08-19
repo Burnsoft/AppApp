@@ -47,6 +47,61 @@
     return NO;
 }
 
+
+// validates whether the token is valid by requesting info about our user.
+- (BOOL)isAccessTokenValid
+{
+    // our variable for an answer:
+    BOOL answer;
+
+    
+    // Building a url request to handle "get user" query.  The method apart is
+    // async and we need to get this info before we take any other action.
+    NSString *urlString = [NSString stringWithFormat:@"http://alpha-api.app.net/stream/0/users/%@?access_token=%@", self.userID, accessToken];
+    NSURL *url = [NSURL URLWithString:urlString];
+    NSURLRequest *request = [NSURLRequest requestWithURL:url];
+
+    // filling in the blanks for the things we need to make this request
+    // synchronous.
+    NSError *error;
+    NSURLResponse *response;
+    
+    // request the data and check to see if we have an error.
+    NSData *json = [NSURLConnection sendSynchronousRequest:request
+                                         returningResponse:&response
+                                                     error:&error];
+    
+    // TODO: Implement better error handling here.
+    if (error) {
+        NSLog(@"error: %@", error);
+    }
+    
+    // Process the data into a dictionary of json data and grab the error code
+    // component if it exists.
+    NSDictionary *data = [NSJSONSerialization JSONObjectWithData:json
+                                                         options:NSJSONReadingAllowFragments
+                                                           error:&error];
+    NSNumber *code = [[data objectForKey:@"error"] objectForKey:@"code"];
+    
+    // validate the code if it exists
+    if ([code isEqualToNumber:[NSNumber numberWithInt:401]]) {
+        
+        // got the unauthorized client code.  kill the access token and return
+        // NO as the answer.
+        accessToken = nil;
+        answer = NO;
+        
+    } else {
+        
+        // we're cool.  return YES
+        answer = YES;
+        
+    }
+    
+    return answer;
+}
+
+
 // TODO: redo these later..
 - (void)readTokenFromDefaults
 {
@@ -397,5 +452,44 @@
     
     [self performRequestWithMethod:@"unfollowUser" routeReplacements:replacements dataProcessingBlock:[self defaultJSONProcessingBlock] uiUpdateBlock:uiCompletionBlock shouldRetry:YES];
 }
+
+- (void)muteUser:(NSString *)ID uiCompletionBlock:(SDWebServiceUICompletionBlock)uiCompletionBlock
+{
+    [self readTokenFromDefaults];
+    if (!accessToken)
+        return;
+    
+    // App.net guys (? Alex K. and Mathew Phillips) say we should put accessToken in the headers, like so:
+    // "Authorization: Bearer " + access_token
+    
+    NSDictionary *replacements = @{ @"accessToken" : accessToken, @"user_id" : ID };
+    
+    [self performRequestWithMethod:@"muteUser" routeReplacements:replacements dataProcessingBlock:[self defaultJSONProcessingBlock] uiUpdateBlock:uiCompletionBlock shouldRetry:YES];
+}
+
+- (void)unmuteUser:(NSString *)ID uiCompletionBlock:(SDWebServiceUICompletionBlock)uiCompletionBlock
+{
+    [self readTokenFromDefaults];
+    if (!accessToken)
+        return;
+    
+    NSDictionary *replacements = @{ @"accessToken" : accessToken, @"user_id" : ID };
+    
+    [self performRequestWithMethod:@"unmuteUser" routeReplacements:replacements dataProcessingBlock:[self defaultJSONProcessingBlock] uiUpdateBlock:uiCompletionBlock shouldRetry:YES];
+}
+
+- (void)getMutedUsers:(SDWebServiceUICompletionBlock)uiCompletionBlock
+{
+    [self readTokenFromDefaults];
+    
+    if (!accessToken)
+        return;
+    
+    NSDictionary *replacements = @{ @"accessToken" : accessToken};
+    
+    [self performRequestWithMethod:@"getMutedUsers" routeReplacements:replacements dataProcessingBlock:[self defaultJSONProcessingBlock] uiUpdateBlock:uiCompletionBlock shouldRetry:YES];
+}
+
+
 
 @end

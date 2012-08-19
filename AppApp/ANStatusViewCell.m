@@ -12,7 +12,7 @@
 #import "NSDate+ANExtensions.h"
 
 CGFloat const ANStatusViewCellTopMargin = 10.0;
-CGFloat const ANStatusViewCellBottomMargin = 10.0;
+CGFloat const ANStatusViewCellBottomMargin = 15.0;
 CGFloat const ANStatusViewCellLeftMargin = 10.0;
 CGFloat const ANStatusViewCellUsernameTextHeight = 15.0;
 CGFloat const ANStatusViewCellAvatarHeight = 50.0;
@@ -21,7 +21,7 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
 @interface ANStatusViewCell()
 {
     UIButton *showUserButton;
-    SDImageView *avatarView;
+    ANImageView *avatarView;
     UILabel *usernameTextLabel;
     UILabel *created_atTextLabel;
     UIView *postView;
@@ -48,8 +48,9 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         
         UIColor* borderColor = [UIColor colorWithRed:157.0/255.0 green:167.0/255.0 blue:178.0/255.0 alpha:1.0];
         UIColor* textColor = [UIColor colorWithRed:30.0/255.0 green:88.0/255.0 blue:119.0/255.0 alpha:1.0];
+        UIColor *highlightedTextColor = [UIColor purpleColor];
         // future avatar
-        avatarView = [[SDImageView alloc] initWithFrame:CGRectMake(10, 10, 50, 50)];
+        avatarView = [[ANImageView alloc] initWithFrame:CGRectMake(10, 10, 50, 50)];
         avatarView.backgroundColor = [UIColor clearColor];
         avatarView.layer.borderWidth = 1.0;
         avatarView.layer.borderColor = [borderColor CGColor];
@@ -62,6 +63,7 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         UIColor *postColor = [UIColor colorWithRed:243.0/255.0 green:247.0/255.0 blue:251.0/255.0 alpha:1.0];
         postView = [[UIView alloc] initWithFrame:CGRectMake(70,0,250,100)];
         postView.alpha = 1.0;
+        postView.clipsToBounds = YES;
         self.postView.backgroundColor = postColor;
         
         _leftBorder = [[CALayer alloc] init];
@@ -91,24 +93,23 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         usernameTextLabel.font = [UIFont fontWithName:@"Helvetica-Bold" size:12.0f];
         usernameTextLabel.backgroundColor = postColor;
         usernameTextLabel.textColor = textColor;
+        usernameTextLabel.highlightedTextColor = highlightedTextColor;
         [self.postView addSubview: usernameTextLabel];
         
         //created_atTextLabel
         created_atTextLabel = [[UILabel alloc] initWithFrame:CGRectMake(185, 10, 55, 15)];
         created_atTextLabel.font = [UIFont fontWithName:@"Helvetica" size:12.0f];
         created_atTextLabel.backgroundColor = postColor;
+        created_atTextLabel.highlightedTextColor = highlightedTextColor;
         created_atTextLabel.textColor = [UIColor grayColor];
         created_atTextLabel.textAlignment = UITextAlignmentRight;
         [self.postView addSubview: created_atTextLabel];
         
         // status label
-        statusTextLabel = [[ANPostLabel alloc] initWithFrame:CGRectMake(10, 27, 230, 100)];
-        //statusTextLabel.dataDetectorTypes = UIDataDetectorTypeAll;
-        statusTextLabel.lineBreakMode = UILineBreakModeWordWrap;
+        statusTextLabel = [[ANPostLabel alloc] initWithFrame:CGRectMake(80, 27, 230, 100)];
         statusTextLabel.backgroundColor = postColor;
-        //statusTextLabel.numberOfLines = 0;
-        statusTextLabel.textColor = textColor;
-        statusTextLabel.font = [UIFont fontWithName:@"Helvetica" size:12.0f];
+        //statusTextLabel.textColor = textColor;
+        //statusTextLabel.font = [UIFont fontWithName:@"Helvetica" size:12.0f];
         statusTextLabel.clipsToBounds = YES;
         
         // set the link style
@@ -117,7 +118,7 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         [linkAttributes setValue:(id)[[UIColor colorWithRed:60.0/255.0 green:123.0/255.0 blue:184.0/255.0 alpha:1.0]
                                                         CGColor] forKey:(NSString*)kCTForegroundColorAttributeName];*/
        
-        [self.postView addSubview: statusTextLabel];
+        [self addSubview: statusTextLabel];
         
         // register observers
         [self registerObservers];
@@ -143,7 +144,6 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
     [self removeObserver:self forKeyPath:@"postData"];
     [self removeObserver:self forKeyPath:@"username"];
     [self removeObserver:self forKeyPath:@"created_at"];
-
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
@@ -153,13 +153,18 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         statusTextLabel.postData = self.postData;
         
         // handle frame resize
-        CGSize maxStatusLabelSize = CGSizeMake(240,100);
+        /*CGSize maxStatusLabelSize = CGSizeMake(240,120);
         CGSize statusLabelSize = [[self.postData objectForKey:@"text"] sizeWithFont: statusTextLabel.font
                                               constrainedToSize:maxStatusLabelSize
                                               lineBreakMode: statusTextLabel.lineBreakMode];
     
         CGRect statusLabelNewFrame = statusTextLabel.frame;
         statusLabelNewFrame.size.height = statusLabelSize.height;
+        statusTextLabel.frame = statusLabelNewFrame;*/
+        
+        CGSize size = [statusTextLabel suggestedFrameSizeToFitEntireStringConstraintedToWidth:230];
+        CGRect statusLabelNewFrame = statusTextLabel.frame;
+        statusLabelNewFrame.size = size;
         statusTextLabel.frame = statusLabelNewFrame;
         
         NSString *username = [self.postData stringForKeyPath:@"user.username"];
@@ -172,44 +177,13 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         
         NSString *avatarURL = [self.postData stringForKeyPath:@"user.avatar_image.url"];
         avatarView.imageURL = avatarURL;
-        
-        statusTextLabel.enabled = YES;
     }
-}
-
-/*
- workaround to a bug.  will investigate more soon.
- 
- the tap doesn't get triggered unless its in the first line's worth of control height.
- 
- */
-- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
-{
-    UIView *result = [super hitTest:point withEvent:event];
-    CGRect statusFrame = statusTextLabel.frame;
-    if (CGRectContainsPoint(statusFrame, point))
-    {
-        CGPoint newPoint = [self convertPoint:point toView:statusTextLabel];
-        if ([statusTextLabel canTapAtPoint:newPoint])
-             return statusTextLabel;
-    }
-
-    if (result == statusTextLabel)
-    {
-        CGPoint newPoint = [self convertPoint:point toView:statusTextLabel];
-        if ([statusTextLabel canTapAtPoint:newPoint])
-            return statusTextLabel;
-        else
-            return self;
-    }
-    return result;
 }
 
 - (void)prepareForReuse
 {
     avatarView.image = [UIImage imageNamed:@"avatarPlaceholder.png"];
     avatarView.backgroundColor = [UIColor clearColor];
-    statusTextLabel.enabled = NO;
 }
 
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated
