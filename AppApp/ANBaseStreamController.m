@@ -25,7 +25,7 @@
 @end
 
 @implementation ANBaseStreamController
-@synthesize currentToolbarView;
+@synthesize currentToolbarView, btnConversation;
 
 - (void)viewDidLoad
 {
@@ -75,28 +75,30 @@
         
         UIImage *btnReplyImg = [UIImage imageNamed:@"actionbar_reply.png"];
         UIButton *btnReply = [UIButton buttonWithType:UIButtonTypeCustom];
+        [btnReply addTarget:self action:@selector(replyToFromStream:) forControlEvents:UIControlEventTouchUpInside];
         [btnReply setImage:btnReplyImg forState:UIControlStateNormal];
         [btnReply setImage:btnReplyImg forState:UIControlStateHighlighted];
         [btnReply setFrame:CGRectMake(45,12,18,21)];
      
         UIImage *btnRepostImg = [UIImage imageNamed:@"actionbar_repost.png"];
         UIButton *btnRepost = [UIButton buttonWithType:UIButtonTypeCustom];
+        [btnRepost addTarget:self action:@selector(repostFromStream:) forControlEvents:UIControlEventTouchUpInside];
         [btnRepost setImage:btnRepostImg forState:UIControlStateNormal];
         [btnRepost setImage:btnRepostImg forState:UIControlStateNormal];
         
         [btnRepost setFrame:CGRectMake(105,12,18,21)];
 
         UIImage *btnConversationImg = [UIImage imageNamed:@"actionbar_conversation.png"];
-        UIButton *btnConversation = [UIButton buttonWithType:UIButtonTypeCustom];
-        [btnConversation setImage:btnConversationImg forState:UIControlStateNormal];
-        [btnConversation setImage:btnConversationImg forState:UIControlStateNormal];
+        self.btnConversation = [UIButton buttonWithType:UIButtonTypeCustom];
+        [self.btnConversation setImage:btnConversationImg forState:UIControlStateNormal];
+        [self.btnConversation setImage:btnConversationImg forState:UIControlStateNormal];
 
-        [btnConversation setFrame:CGRectMake(175,12,22,21)];
+        [self.btnConversation setFrame:CGRectMake(175,12,22,21)];
         
         [self.currentToolbarView addSubview:background];
         [self.currentToolbarView addSubview:btnReply];
         [self.currentToolbarView addSubview:btnRepost];
-        [self.currentToolbarView addSubview:btnConversation];
+        [self.currentToolbarView addSubview:self.btnConversation]; // self'ed because we need to be able to hide it on posts without replies (@ralf)
     }
     
     toolbarIsVisible = false;
@@ -324,12 +326,15 @@
     CGPoint swipeLocation = [gestureRecognizer locationInView:self.tableView];
     NSIndexPath *indexPath = [self.tableView indexPathForRowAtPoint:swipeLocation];
     ANStatusViewCell *currentCell = (ANStatusViewCell *)[self.tableView cellForRowAtIndexPath:indexPath];
-
+    
     newSelection = indexPath;
     
     if ((currentSelection) && (newSelection.row == currentSelection.row)) { // user swiped on same cell twice
         if (!toolbarIsVisible) {
             [self.currentToolbarView setFrame:CGRectMake(71, currentCell.frame.size.height, 260, 47)];
+            self.currentToolbarView.tag = indexPath.row;
+            NSLog(@"Tag: %i",  self.currentToolbarView.tag);
+            [self toggleToolbarButtonsForIndexPath:indexPath];
             [currentCell addSubview:self.currentToolbarView];
             toolbarIsVisible = true;
             currentSelection = indexPath;
@@ -340,6 +345,9 @@
         }
     } else { // user swiped on new cell
         [self.currentToolbarView setFrame:CGRectMake(71, currentCell.frame.size.height, 260, 47)];
+        self.currentToolbarView.tag = indexPath.row;
+        NSLog(@"Tag: %i",  self.currentToolbarView.tag);
+        [self toggleToolbarButtonsForIndexPath:indexPath];
         [currentCell addSubview:self.currentToolbarView];
         toolbarIsVisible = true;
         currentSelection = indexPath;
@@ -349,7 +357,20 @@
     [self.tableView endUpdates];
 }
 
-// TODO: @ralf: The following method can likely be completely removed
+- (void)toggleToolbarButtonsForIndexPath:(NSIndexPath *)indexPath
+{
+    NSDictionary *postData = [streamData objectAtIndex:indexPath.row];
+    NSString *numReplies = [postData stringForKeyPath:@"num_replies"];
+    NSString *isReplyTo = [postData stringForKeyPath:@"reply_to"];
+    if (([numReplies isEqualToString:@"0"]) && (!isReplyTo))
+    {
+        self.btnConversation.enabled = NO;
+    } else
+    {
+        self.btnConversation.enabled = YES;
+    }
+}
+
 - (void)swipeToSideMenu:(UISwipeGestureRecognizer *)gestureRecognizer
 {
     //CGPoint swipeLocation = [gestureRecognizer locationInView:self.tableView];
@@ -542,6 +563,20 @@
         [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationAutomatic];
         [self.tableView endUpdates];
     }
+}
+
+#pragma mark -
+#pragma mark Action Bar methods
+- (void)replyToFromStream:(id)sender {
+    NSDictionary *postData = [streamData objectAtIndex:[[(UIButton *)sender superview] tag]];
+    ANPostStatusViewController *postView = [[ANPostStatusViewController alloc] initWithPostData:postData postMode:ANPostModeReply];
+    [self presentModalViewController:postView animated:YES];
+}
+
+- (void)repostFromStream:(id)sender {
+    NSDictionary *postData = [streamData objectAtIndex:[[(UIButton *)sender superview] tag]];
+    ANPostStatusViewController *postView = [[ANPostStatusViewController alloc] initWithPostData:postData postMode:ANPostModeRepost];
+    [self presentModalViewController:postView animated:YES];
 }
 
 @end
