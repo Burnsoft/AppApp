@@ -1,8 +1,27 @@
-//
-//  SideMenuViewController.m
-//  MFSideMenuDemo
-//
-//  Created by Michael Frederick on 3/19/12.
+/*
+ Copyright (c) 2012 T. Chroma, M. Herzog, N. Pannuto, J.Pittman, R. Rottmann, B. Sneed, V. Speelman
+ The AppApp source code is distributed under the The MIT License (MIT) license.
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ associated documentation files (the "Software"), to deal in the Software without restriction,
+ including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included in all copies or substantial
+ portions of the Software.
+ 
+ Any end-user product or application build based on this code, must include the following acknowledgment:
+ 
+ "This product includes software developed by the original AppApp team and its contributors", in the software
+ itself, including a link to www.app-app.net.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+ TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.
+*/
 
 #import "ANSideMenuController.h"
 #import "MFSideMenu.h"
@@ -67,7 +86,8 @@ NSString *const ANSideMenuControllerSearchTagsKey = @"ANSideMenuControllerSearch
 {
     [super viewWillDisappear:animated];
     [searchCell.searchTextField resignFirstResponder];
-    [searchCell hideHashTag];    
+    [searchCell hideHashTag];
+    searchCell.searchTextField.text = @"";
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -75,6 +95,7 @@ NSString *const ANSideMenuControllerSearchTagsKey = @"ANSideMenuControllerSearch
     [super viewDidDisappear:animated];
     [searchCell.searchTextField resignFirstResponder];
     [searchCell hideHashTag];
+    searchCell.searchTextField.text = @"";    
 }
 
 #pragma mark - UITableViewDataSource
@@ -205,39 +226,14 @@ NSString *const ANSideMenuControllerSearchTagsKey = @"ANSideMenuControllerSearch
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField
 {
-    // If there is text and we aren't reusing a hash tag
-    if (textField.text.length > 0 && ![searchTags containsObject:textField.text])
-    {
-        // Begin table updates
-        [self.tableView beginUpdates];
-        
-        // Add text to model
-        [searchTags insertObject:textField.text atIndex:0];
-        
-        [self.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:1 inSection:1]] withRowAnimation:UITableViewRowAnimationTop];
-        
-        // Reload cells
-        [self.tableView endUpdates];
-
-        // Create hashtag controller
-        NSString *hashTag = textField.text;
-        
-        // Set up delay for animation purposes
-        NSTimeInterval delayInSeconds = .5;
-        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
-        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-
-            // Select the cell
-            [self.tableView selectRowAtIndexPath:[NSIndexPath indexPathForRow:1 inSection:1] animated:NO scrollPosition:UITableViewScrollPositionNone];
-
-            ANHashtagStreamController *hashTagController = [[ANHashtagStreamController alloc] initWithHashtag:hashTag];
-            NSArray *controllers = [NSArray arrayWithObject:hashTagController];
-//            [self updateOnlyCurrentTableViewToScrollToTop:hashTagController];
-            [MFSideMenuManager sharedManager].navigationController.viewControllers = controllers;
-            [MFSideMenuManager sharedManager].navigationController.menuState = MFSideMenuStateHidden;
-        });
-        
-        [self _syncHashTagsToDefaults];
+    if (textField.text.length > 0 && [[textField.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"@"]) {
+        [self _handleUsernameSearch:textField.text];
+    } else if (textField.text.length > 0){
+        NSString *hashtag = textField.text;
+        if ([textField.text rangeOfString:@"#"].location == 0) {
+            hashtag = [textField.text stringByReplacingCharactersInRange:NSMakeRange(0, 1) withString:@""];
+        }
+        [self _handleHashTagSearch:hashtag];
     }
     
     // Resign first responder
@@ -246,12 +242,71 @@ NSString *const ANSideMenuControllerSearchTagsKey = @"ANSideMenuControllerSearch
     // Change hashtag
     [searchCell hideHashTag];
     
+    // Clear search field
+    searchCell.searchTextField.text = @"";
+    
     return YES;
 }
 
-- (void)textFieldDidBeginEditing:(UITextField *)textField
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string
 {
-    [searchCell showHashTag];
+    // Get new string
+    NSString *newString = [textField.text stringByReplacingCharactersInRange:range withString:string];
+    
+    // Get first char
+    NSString *firstChar = newString.length == 0 ? @"" : [newString substringWithRange:NSMakeRange(0, 1)];
+    
+    // if string is empty OR the first char is @ or #
+    if (newString.length == 0 || (newString.length > 0 && ([firstChar isEqualToString:@"@"] || [firstChar isEqualToString:@"#"]))) {
+        [searchCell hideHashTag];
+    } else {
+        [searchCell showHashTag];
+    }
+    
+    return YES;
+}
+
+- (void)_handleUsernameSearch:(NSString *)username
+{
+    ANUserViewController *userViewController = [[ANUserViewController alloc] initWithUsername:username];
+    [MFSideMenuManager sharedManager].navigationController.viewControllers = @[userViewController];
+    [MFSideMenuManager sharedManager].navigationController.menuState = MFSideMenuStateHidden;
+}
+
+- (void)_handleHashTagSearch:(NSString *)hashTag
+{
+    // If there is text and we aren't reusing a hash tag
+    if (hashTag.length > 0 && ![searchTags containsObject:hashTag])
+    {
+        // Begin table updates
+        [self.tableView beginUpdates];
+        
+        // Add text to model
+        [searchTags insertObject:hashTag atIndex:0];
+        
+        [self.tableView insertRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:1 inSection:1]] withRowAnimation:UITableViewRowAnimationTop];
+        
+        // Reload cells
+        [self.tableView endUpdates];
+        
+        // Create hashtag controller
+        // Set up delay for animation purposes
+        NSTimeInterval delayInSeconds = .5;
+        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
+        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+            
+            // Select the cell
+            [self.tableView selectRowAtIndexPath:[NSIndexPath indexPathForRow:1 inSection:1] animated:NO scrollPosition:UITableViewScrollPositionNone];
+            
+            ANHashtagStreamController *hashTagController = [[ANHashtagStreamController alloc] initWithHashtag:hashTag];
+            NSArray *controllers = [NSArray arrayWithObject:hashTagController];
+            //            [self updateOnlyCurrentTableViewToScrollToTop:hashTagController];
+            [MFSideMenuManager sharedManager].navigationController.viewControllers = controllers;
+            [MFSideMenuManager sharedManager].navigationController.menuState = MFSideMenuStateHidden;
+        });
+        
+        [self _syncHashTagsToDefaults];
+    }
 }
 
 // syncs searchTags array to NSUserDefaults

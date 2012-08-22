@@ -1,10 +1,27 @@
-//
-//  ANUserViewController.m
-//  AppApp
-//
-//  Created by brandon on 8/11/12.
-//  Copyright (c) 2012 Sneakyness. All rights reserved.
-//
+/*
+ Copyright (c) 2012 T. Chroma, M. Herzog, N. Pannuto, J.Pittman, R. Rottmann, B. Sneed, V. Speelman
+ The AppApp source code is distributed under the The MIT License (MIT) license.
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ associated documentation files (the "Software"), to deal in the Software without restriction,
+ including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included in all copies or substantial
+ portions of the Software.
+ 
+ Any end-user product or application build based on this code, must include the following acknowledgment:
+ 
+ "This product includes software developed by the original AppApp team and its contributors", in the software
+ itself, including a link to www.app-app.net.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+ TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.
+*/
 
 #import "ANUserViewController.h"
 #import "SDImageView.h"
@@ -63,6 +80,16 @@
     return self;
 }
 
+- (id)initWithUsername:(NSString *)username
+{
+    self = [super initWithNibName:@"ANUserViewController" bundle:nil];
+    
+    userID = username;
+    self.title = username;
+    
+    return self;
+}
+
 - (NSString *)sideMenuTitle
 {
     return @"Me";
@@ -97,7 +124,7 @@
     frame.size.height = MAX(bioSize.height,25.0);
     bioLabel.frame = frame;
     frame = topCoverView.frame;
-    frame.size.height = MAX(bioSize.height,25.0) + 10.0;
+    frame.size.height = MAX(bioSize.height,30.0) + 10.0;
     topCoverView.frame = frame;
     UIView* tableHeader = self.tableView.tableHeaderView;
     frame = self.tableView.tableHeaderView.frame;
@@ -127,9 +154,15 @@
     [[ANAPICall sharedAppAPI] getUser:userID uiCompletionBlock:^(id dataObject, NSError *error) {
         SDLog(@"user data = %@", dataObject);
         
-        userData = (NSDictionary *)dataObject;
-        [self configureFromUserData];
-        [self fetchFollowData];
+        // Check if we have errors.
+        if (!error && [dataObject objectForKey:@"error"] == nil) {
+            userData = (NSDictionary *)dataObject;
+            [self configureFromUserData];
+            [self fetchFollowData];
+        } else {
+            //TODO: Show an error
+        }
+        
         [SVProgressHUD dismiss];
     }];
     
@@ -144,7 +177,7 @@
 
 - (BOOL)doIFollowThisUser
 {
-    BOOL result = [userData boolForKey:@"is_follower"];
+    BOOL result = [userData boolForKey:@"you_follow"];
     return result;
 }
 
@@ -273,6 +306,9 @@
 
 - (void)viewWillAppear:(BOOL)animated
 {
+    // only do this if its the only vc on the stack.  workaround for the side menu keeping it around.
+    if ([self.navigationController.viewControllers count] == 1)
+        [self fetchDataFromUserID];
     [super viewWillAppear:animated];
 }
 
@@ -507,11 +543,11 @@
             if (!cell) {
                 cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:CellIdentifier];
             }
-            cell.textLabel.text = @"Muted";
-            cell.detailTextLabel.text = @"?";
+            cell.detailTextLabel.text = @"";
             cell.accessoryType = UITableViewCellAccessoryNone;
             if ([self isThisUserMe:userID])
             {
+                cell.textLabel.text = @"Muted Users";
                 if (mutedList)
                 {
                     cell.detailTextLabel.text = [NSString stringWithFormat:@"%u", mutedList.count];
@@ -521,6 +557,7 @@
             }
             else
             {
+                cell.textLabel.text = @"Muted User";
                 BOOL youMuted = [userData boolForKey:@"you_muted"];
                 if (youMuted)
                 {

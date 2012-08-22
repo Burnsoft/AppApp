@@ -1,10 +1,28 @@
-//
-//  ANStatusViewCell.m
-//  AppApp
-//
-//  Created by Zach Holmquist on 8/10/12.
-//  Copyright (c) 2012 Sneakyness. All rights reserved.
-//
+/*
+ Copyright (c) 2012 T. Chroma, M. Herzog, N. Pannuto, J.Pittman, R. Rottmann, B. Sneed, V. Speelman
+ The AppApp source code is distributed under the The MIT License (MIT) license.
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ associated documentation files (the "Software"), to deal in the Software without restriction,
+ including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included in all copies or substantial
+ portions of the Software.
+ 
+ Any end-user product or application build based on this code, must include the following acknowledgment:
+ 
+ "This product includes software developed by the original AppApp team and its contributors", in the software
+ itself, including a link to www.app-app.net.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+ TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.
+*/
+
 #import <QuartzCore/QuartzCore.h>
 #import "ANStatusViewCell.h"
 #import "NSDictionary+SDExtensions.h"
@@ -44,7 +62,7 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
                 
         UIColor* borderColor = [UIColor colorWithRed:157.0/255.0 green:167.0/255.0 blue:178.0/255.0 alpha:1.0];
         UIColor* textColor = [UIColor colorWithRed:30.0/255.0 green:88.0/255.0 blue:119.0/255.0 alpha:1.0];
-        UIColor *highlightedTextColor = [UIColor purpleColor];
+        UIColor *highlightedTextColor = textColor;
         // future avatar
         avatarView = [[ANImageView alloc] initWithFrame:CGRectMake(10, 10, 50, 50)];
         avatarView.backgroundColor = [UIColor clearColor];
@@ -107,18 +125,7 @@ CGFloat const ANStatusViewCellAvatarWidth = 50.0;
         // status label
         statusTextLabel = [[ANPostLabel alloc] initWithFrame:CGRectMake(80, 27, 230, 100)];
         statusTextLabel.backgroundColor = postColor;
-
-        //statusTextLabel.numberOfLines = 0;
-        // statusTextLabel.textColor = textColor;
-        // statusTextLabel.highlightedTextColor = textColor;
-        // statusTextLabel.font = [UIFont fontWithName:@"Helvetica" size:12.0f];
         statusTextLabel.clipsToBounds = YES;
-        
-        // set the link style
-        /*NSMutableDictionary *linkAttributes = [[NSMutableDictionary alloc] initWithCapacity:1];
-        statusTextLabel.linkAttributes = linkAttributes;
-        [linkAttributes setValue:(id)[[UIColor colorWithRed:60.0/255.0 green:123.0/255.0 blue:184.0/255.0 alpha:1.0]
-                                                        CGColor] forKey:(NSString*)kCTForegroundColorAttributeName];*/
        
         [self addSubview: statusTextLabel];
         
