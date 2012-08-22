@@ -8,4 +8,4 @@
 
 #import "ANConstants.h"
 NSString *const kANAPIClientID = @"RG2Brqye96rLZQtjwRenVZsBrMtpYXYP";
-NSString *const kImgurAPIKey = @"a9a7a840e73a8c4e9f0314ab1608c131";
+NSString *const kImgurAPIKey = @"c2b4b379144763e04be233feb020cde2";
