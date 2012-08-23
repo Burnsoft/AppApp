@@ -36,6 +36,10 @@
 #import "NSDictionary+SDExtensions.h"
 //#import "NSDate+Helper.h"
 
+#import "ANReadLaterManager.h"
+#import "ANReadLaterAuthViewController.h"
+#import "MKInfoPanel.h"
+
 
 @interface ANBaseStreamController ()
 
@@ -229,7 +233,22 @@
             }
             return result;
         };
-    }    
+        
+        __weak typeof(self) blockSelf = self;
+        cell.statusTextLabel.longPressHandler = ^BOOL (NSString *type, NSString *value) {
+            if([type isEqualToString:@"link"])
+            {
+                UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:value delegate:self cancelButtonTitle:NSLocalizedString(@"Cancel", @"") destructiveButtonTitle:nil otherButtonTitles:NSLocalizedString(@"Send to Pocket", @""), nil];
+                [sheet showInView:blockSelf.view];
+            }
+            else
+            {
+                // TODO: Craft a URL pointing to the post on alpha.app.net
+                //       open the action sheet above with this URL. @jtregunna
+            }
+            return YES;
+        };
+    }
 
     NSDictionary *statusDict = [streamData objectAtIndex:[indexPath row]];
     
@@ -300,6 +319,39 @@
         [self.tableView endUpdates];
     }
     [super scrollViewDidScroll:scrollView];
+}
+
+#pragma mark - Action sheet delegate
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    ANReadLaterManager *manager = [[ANReadLaterManager alloc] initWithDelegate:self];
+
+    switch(buttonIndex)
+    {
+        case 0: // Pocket
+            [manager saveURL:[NSURL URLWithString:actionSheet.title] serviceType:kANReadLaterTypePocket];
+    }
+}
+
+#pragma mark - Read Later delegate
+
+- (void)readLater:(ANReadLaterManager *)manager savedURL:(NSURL *)url
+{
+    [MKInfoPanel showPanelInView:self.view type:MKInfoPanelTypeInfo title:NSLocalizedString(@"Saved URL", @"") subtitle:NSLocalizedString(@"Successfully saved URL to Pocket", @"") hideAfter:2.5f];
+}
+
+- (void)readLater:(ANReadLaterManager *)manager failedToSaveURL:(NSURL *)url needsToRelogin:(BOOL)needsToRelogin error:(NSError *)error
+{
+    if(needsToRelogin)
+    {
+        ANReadLaterAuthViewController* vc = [[ANReadLaterAuthViewController alloc] initWithServiceType:kANReadLaterTypePocket];
+        [self presentModalViewController:vc animated:YES];
+    }
+    else
+    {
+        [MKInfoPanel showPanelInView:self.view type:MKInfoPanelTypeError title:NSLocalizedString(@"Error Saving URL", @"") subtitle:[error localizedDescription] hideAfter:2.5f];
+    }
 }
 
 #pragma mark - Gesture Handling
