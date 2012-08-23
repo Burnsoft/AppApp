@@ -45,7 +45,7 @@
     [super viewDidLoad];
     
     //TODO: MOVE OUT OF HERE
-    NSString *redirectURI = @"discushion://authenticate";
+    NSString *redirectURI = @"appapp://callmemaybe";
     
     NSString *scopes = @"stream write_post follow messages";
     NSString *authURLstring = [NSString stringWithFormat:@"https://alpha.app.net/oauth/authenticate?client_id=%@&response_type=token&redirect_uri=%@&scope=%@&adnview=appstore", kANAPIClientID, redirectURI, scopes];
