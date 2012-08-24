@@ -1414,8 +1414,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer: Nicholas Burns (E9YXW4EN7Y)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Nicholas Burns (E9YXW4EN7Y)";
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -1434,8 +1432,6 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PROVISIONING_PROFILE = "DED8A69F-A656-456C-B37A-5CFD979F6CBB";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "DED8A69F-A656-456C-B37A-5CFD979F6CBB";
-				PROVISIONING_PROFILE = "";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				SDKROOT = iphoneos;
 				USER_HEADER_SEARCH_PATHS = "\"$(SRCROOT)/Externals/DTCoreText\"/**";
 				VALIDATE_PRODUCT = YES;
@@ -1475,8 +1471,6 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer: Nicholas Burns (E9YXW4EN7Y)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Nicholas Burns (E9YXW4EN7Y)";
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AppApp/AppApp-Prefix.pch";
 				INFOPLIST_FILE = "AppApp/AppApp-Info.plist";
@@ -1488,8 +1482,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "DED8A69F-A656-456C-B37A-5CFD979F6CBB";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "DED8A69F-A656-456C-B37A-5CFD979F6CBB";
-				PROVISIONING_PROFILE = "";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
