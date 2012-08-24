@@ -32,6 +32,9 @@
 #import "UIDevice+IdentifierAddition.h"
 #import "RRConstants.h"
 #import <QuartzCore/QuartzCore.h>
+#import "PocketAPI.h"
+#import "MKInfoPanel.h"
+#import "TestFlight.h"
 
 @implementation ANAppDelegate
 
@@ -69,7 +72,8 @@ static ANAppDelegate *sharedInstance = nil;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-   // [TestFlight takeOff:@"c2a440bf3e4d6e2cb3a8267e89c71dc0_MTIwMjEwMjAxMi0wOC0xMCAyMTo0NjoyMC41MTQwODc"];
+    [TestFlight takeOff:@"c2a440bf3e4d6e2cb3a8267e89c71dc0_MTIwMjEwMjAxMi0wOC0xMCAyMTo0NjoyMC41MTQwODc"];
+    [[PocketAPI sharedAPI] setAPIKey:kPocketAPIKey];
     
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     
@@ -88,6 +92,7 @@ static ANAppDelegate *sharedInstance = nil;
         NSLog(@"bacon");
     }
     
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didAuthenticate:) name:@"DidAuthenticate" object:nil];
     // if we don't have an access token or it's not a valid token, display auth.
     // probably should move back to calling Safari. <-- disagree, this looks fine. -- jedi
     if (![[ANAPICall sharedAppAPI] hasAccessToken] || ![[ANAPICall sharedAppAPI] isAccessTokenValid])
@@ -105,7 +110,7 @@ static ANAppDelegate *sharedInstance = nil;
 #endif
     pmbConnector = [[RRDefaultPlatformConnector alloc] initWithApiKey:key withApiSecret:secret];
     pmbConnector.delegate = self;
-    
+        
     [self _setupGlobalStyling];
     
     return YES;
@@ -151,6 +156,13 @@ static ANAppDelegate *sharedInstance = nil;
     return YES;
 }
 
+- (void)didAuthenticate:(NSNotification *)notification
+{
+    if ([[ANAPICall sharedAppAPI] hasAccessToken] && [[ANAPICall sharedAppAPI] isAccessTokenValid]) {
+        [self registerForRemoteNotifications];
+    }
+}
+
 - (void)registerForRemoteNotifications
 {
     [[UIApplication sharedApplication] registerForRemoteNotificationTypes:(UIRemoteNotificationTypeSound |
@@ -171,7 +183,7 @@ static ANAppDelegate *sharedInstance = nil;
     metadata.tags = [NSDictionary dictionary];
     
     [pmbConnector asyncRegisterDevice:metadata];
-    
+    [pmbConnector asyncAssociateUser:[[ANAPICall sharedAppAPI] userID] withDeviceId:metadata.deviceId andAccessToken:[[ANAPICall sharedAppAPI] accessToken]];
 }
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)aDeviceToken
@@ -190,6 +202,28 @@ static ANAppDelegate *sharedInstance = nil;
 #ifdef DEBUG
     NSLog(@"didFailToRegisterForRemoteNotificationsWithError: %@", error.localizedDescription);
 #endif
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
+{
+    NSLog(@"didReceiveRemoteNotification");
+    NSString *message = nil;
+    
+    id aps = [userInfo objectForKey:@"aps"];
+    if ([aps isKindOfClass:[NSDictionary class]]) {
+        message = (NSString *)[(NSDictionary *)aps objectForKey:@"alert"];
+    }
+    
+    NSString *adnUsername = (NSString *)[userInfo objectForKey:@"adnUsername"];
+    NSString *rawText = (NSString *)[userInfo objectForKey:@"rawText"];
+    NSString *adnPostId = (NSString *)[userInfo objectForKey:@"adnPostId"]; // Can use this later for deep linking
+    
+    if (message) {
+        [MKInfoPanel showPanelInView:self.window.rootViewController.view
+                                type:MKInfoPanelTypeInfo
+                               title:[NSString stringWithFormat:@"%@%@", @"@", adnUsername]
+                            subtitle:rawText hideAfter:6.0f];
+    }
 }
 
 - (void)didRegistrationFail:(RRDeviceMetadata *)_metadata withError:(NSError *)_error
@@ -227,7 +261,10 @@ static ANAppDelegate *sharedInstance = nil;
 
 - (void)applicationDidBecomeActive:(UIApplication *)application
 {
-    [self registerForRemoteNotifications];
+    [[UIApplication sharedApplication] setApplicationIconBadgeNumber:0];
+    if ([[ANAPICall sharedAppAPI] hasAccessToken] && [[ANAPICall sharedAppAPI] isAccessTokenValid]) {
+        [self registerForRemoteNotifications];
+    }
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application
